@@ -1,6 +1,6 @@
 // AI Service for handling Gemini API calls
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'your-gemini-api-key-here';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyBH7XgxqVy8QoQZQZQZQZQZQZQZQZQZQZQ';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 interface AssignmentGenerationRequest {
   promptDescription: string;
@@ -21,7 +21,7 @@ interface DoubtResolutionRequest {
 }
 
 export class AIService {
-  private async callGeminiAPI(prompt: string): Promise<string> {
+  private async callGeminiAPI(prompt: string, temperature: number = 0.7): Promise<string> {
     try {
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -35,23 +35,49 @@ export class AIService {
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
+            temperature,
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 1024,
-          }
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
         })
       });
 
       if (!response.ok) {
-        throw new Error(`API call failed: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error Response:', errorData);
+        throw new Error(`API call failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      return data.candidates[0]?.content?.parts[0]?.text || 'No response generated';
+      
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        console.error('Invalid API response structure:', data);
+        throw new Error('Invalid response from AI service');
+      }
+
+      return data.candidates[0].content.parts[0]?.text || 'No response generated';
     } catch (error) {
       console.error('Gemini API Error:', error);
-      throw new Error('Failed to get AI response');
+      throw error;
     }
   }
 
@@ -68,47 +94,75 @@ ${request.options.numQuestions ? `- Number of Questions: ${request.options.numQu
 ${request.options.wordCount ? `- Word Count (approx): ${request.options.wordCount}` : ''}
 - Specific focus/description: ${request.promptDescription}
 
-Provide only the assignment content, formatted clearly.`;
+Provide only the assignment content, formatted clearly. If generating multiple choice questions, include 4 options (A, B, C, D) for each question. If generating essay prompts, provide clear instructions and expectations.`;
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const draftContent = await this.callGeminiAPI(fullPrompt);
+      const draftContent = await this.callGeminiAPI(fullPrompt, 0.3);
 
       return {
         success: true,
         draftContent
       };
     } catch (error) {
+      console.error('Assignment generation error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Failed to generate assignment content'
       };
     }
   }
 
   async resolveDoubtAI(request: DoubtResolutionRequest): Promise<{ success: boolean; hint?: string; error?: string }> {
     try {
-      const systemPrompt = `You are a highly empathetic, patient, and knowledgeable K-12 educational tutor. Your sole purpose is to guide the student towards understanding by providing *only the next logical step, a single concise hint, or a clarifying question*. DO NOT provide the full solution or final answer. Encourage critical thinking. If the student explicitly asks for the 'next step' or 'another hint', provide the *subsequent* logical progression. If the question is unclear, ask for clarification. If it's a very simple factual lookup, you may provide the direct factual answer. Maintain a supportive and encouraging tone.`;
+      const systemPrompt = `You are a helpful and patient K-12 educational tutor. Your goal is to guide students by providing helpful hints and explanations without giving away complete answers. 
+
+Key guidelines:
+- Provide step-by-step guidance
+- Ask clarifying questions when needed
+- Encourage critical thinking
+- Use simple, age-appropriate language
+- Be supportive and encouraging
+- If it's a math problem, guide them through the process
+- If it's a concept question, help them understand the underlying principles
+
+Remember: Guide them to the answer, don't give the answer directly.`;
 
       let conversationContext = '';
       if (request.conversationHistory && request.conversationHistory.length > 0) {
         conversationContext = '\n\nPrevious conversation:\n' + 
-          request.conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n');
+          request.conversationHistory.map(msg => `${msg.role === 'user' ? 'Student' : 'Tutor'}: ${msg.content}`).join('\n');
       }
 
-      const userPrompt = `My question is: "${request.studentQuestion}". The context is: "${request.assignmentContext}". Please provide the next logical step or a hint.${conversationContext}`;
+      const userPrompt = `Student's question: "${request.studentQuestion}"
+
+Assignment context: "${request.assignmentContext}"${conversationContext}
+
+Please provide a helpful hint or guidance to help the student understand the concept or solve the problem. Remember to guide them step by step without giving the complete answer.`;
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const hint = await this.callGeminiAPI(fullPrompt);
+      const hint = await this.callGeminiAPI(fullPrompt, 0.6);
 
       return {
         success: true,
         hint
       };
     } catch (error) {
+      console.error('Doubt resolution error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'I\'m having trouble right now. Please try asking your teacher or classmates for help.'
       };
+    }
+  }
+
+  // Test connection method
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await this.callGeminiAPI('Hello, this is a test. Please respond with "Connection successful".');
+      return response.includes('successful') || response.includes('test');
+    } catch (error) {
+      console.error('AI service connection test failed:', error);
+      return false;
     }
   }
 }

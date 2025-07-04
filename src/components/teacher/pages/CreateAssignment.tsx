@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../../contexts/DataContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { aiService } from '../../../services/aiService';
 import { 
   Save, 
   Eye, 
@@ -14,13 +15,29 @@ import {
   Users,
   Settings,
   Plus,
-  X
+  X,
+  Sparkles,
+  Loader,
+  RefreshCw
 } from 'lucide-react';
 
 const CreateAssignment: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { classes, createAssignment } = useData();
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDraft, setAiDraft] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiOptions, setAiOptions] = useState({
+    questionType: 'MCQ',
+    difficulty: 'Medium',
+    topic: '',
+    gradeLevel: '9th Grade',
+    numQuestions: 5,
+    wordCount: 200
+  });
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -102,6 +119,41 @@ const CreateAssignment: React.FC = () => {
         tiers: prev.differentiation.tiers.filter((_, i) => i !== index)
       }
     }));
+  };
+
+  const handleGenerateAIDraft = async () => {
+    if (!aiPrompt.trim()) return;
+
+    setAiLoading(true);
+    try {
+      const response = await aiService.generateAssignmentDraft({
+        promptDescription: aiPrompt,
+        options: aiOptions
+      });
+
+      if (response.success && response.draftContent) {
+        setAiDraft(response.draftContent);
+      } else {
+        alert('Failed to generate assignment: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('AI generation error:', error);
+      alert('Failed to generate assignment. Please try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAcceptAIDraft = () => {
+    setFormData(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        text: prev.content.text + '\n\n' + aiDraft
+      }
+    }));
+    setAiDraft('');
+    setShowAIAssistant(false);
   };
 
   return (
@@ -209,7 +261,17 @@ const CreateAssignment: React.FC = () => {
 
         {/* Multi-Modal Content */}
         <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Assignment Content</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Assignment Content</h2>
+            <button
+              type="button"
+              onClick={() => setShowAIAssistant(true)}
+              className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI Assistant
+            </button>
+          </div>
           
           <div className="space-y-4">
             <div>
@@ -472,6 +534,175 @@ const CreateAssignment: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* AI Assistant Modal */}
+      {showAIAssistant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                AI Assignment Assistant
+              </h2>
+              <button 
+                onClick={() => setShowAIAssistant(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Describe the assignment you need
+                </label>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                  placeholder="e.g., Generate 5 multiple choice questions about photosynthesis for 9th grade students"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                  <select
+                    value={aiOptions.questionType}
+                    onChange={(e) => setAiOptions(prev => ({ ...prev, questionType: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="MCQ">Multiple Choice</option>
+                    <option value="Short Answer">Short Answer</option>
+                    <option value="Essay">Essay</option>
+                    <option value="Problem Set">Problem Set</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                  <select
+                    value={aiOptions.difficulty}
+                    onChange={(e) => setAiOptions(prev => ({ ...prev, difficulty: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Topic</label>
+                  <input
+                    type="text"
+                    value={aiOptions.topic}
+                    onChange={(e) => setAiOptions(prev => ({ ...prev, topic: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="e.g., Photosynthesis"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                  <select
+                    value={aiOptions.gradeLevel}
+                    onChange={(e) => setAiOptions(prev => ({ ...prev, gradeLevel: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="6th Grade">6th Grade</option>
+                    <option value="7th Grade">7th Grade</option>
+                    <option value="8th Grade">8th Grade</option>
+                    <option value="9th Grade">9th Grade</option>
+                    <option value="10th Grade">10th Grade</option>
+                    <option value="11th Grade">11th Grade</option>
+                    <option value="12th Grade">12th Grade</option>
+                  </select>
+                </div>
+
+                {aiOptions.questionType === 'MCQ' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Questions</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={aiOptions.numQuestions}
+                      onChange={(e) => setAiOptions(prev => ({ ...prev, numQuestions: parseInt(e.target.value) }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    />
+                  </div>
+                )}
+
+                {aiOptions.questionType === 'Essay' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Word Count</label>
+                    <input
+                      type="number"
+                      min="50"
+                      max="2000"
+                      value={aiOptions.wordCount}
+                      onChange={(e) => setAiOptions(prev => ({ ...prev, wordCount: parseInt(e.target.value) }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleGenerateAIDraft}
+                disabled={!aiPrompt.trim() || aiLoading}
+                className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generate Draft
+                  </>
+                )}
+              </button>
+
+              {aiDraft && (
+                <div className="border-t pt-6">
+                  <h3 className="font-medium text-gray-900 mb-3">Generated Content:</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-700">{aiDraft}</pre>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleAcceptAIDraft}
+                      className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                    >
+                      Accept & Insert
+                    </button>
+                    <button
+                      onClick={handleGenerateAIDraft}
+                      disabled={aiLoading}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Regenerate
+                    </button>
+                    <button
+                      onClick={() => setAiDraft('')}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

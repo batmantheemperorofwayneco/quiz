@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bot, 
   Send, 
@@ -11,8 +11,10 @@ import {
   Lightbulb,
   MessageSquare,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Loader
 } from 'lucide-react';
+import { aiService } from '../../../services/aiService';
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -25,6 +27,21 @@ const AIDoubtResolution: React.FC = () => {
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [assignmentContext, setAssignmentContext] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+
+  // Test AI connection on component mount
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const connected = await aiService.testConnection();
+        setIsConnected(connected);
+      } catch (error) {
+        setIsConnected(false);
+      }
+    };
+    testConnection();
+  }, []);
 
   const handleSubmitQuestion = async () => {
     if (!question.trim()) return;
@@ -37,38 +54,69 @@ const AIDoubtResolution: React.FC = () => {
 
     setConversation(prev => [...prev, userMessage]);
     setIsLoading(true);
+    setError(null);
     setQuestion('');
 
     try {
-      // Simulate AI response - replace with actual API call
-      setTimeout(() => {
+      const response = await aiService.resolveDoubtAI({
+        studentQuestion: question,
+        assignmentContext: assignmentContext || 'General question',
+        conversationHistory: conversation.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }))
+      });
+
+      if (response.success && response.hint) {
         const aiResponse: ConversationMessage = {
           role: 'assistant',
-          content: "Let me help you with that step by step. First, let's identify what type of problem this is. Can you tell me what specific part you're struggling with?",
+          content: response.hint,
           timestamp: new Date().toISOString()
         };
         setConversation(prev => [...prev, aiResponse]);
-        setIsLoading(false);
-      }, 1500);
+      } else {
+        setError(response.error || 'Failed to get AI response');
+      }
     } catch (error) {
-      setIsLoading(false);
       console.error('Error getting AI response:', error);
+      setError('Sorry, I\'m having trouble right now. Please try asking your teacher or classmates for help.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleShowNextStep = () => {
+  const handleShowNextStep = async () => {
+    if (conversation.length === 0) return;
+
     setIsLoading(true);
-    
-    // Simulate getting next step
-    setTimeout(() => {
-      const nextStep: ConversationMessage = {
-        role: 'assistant',
-        content: "Great! Now that we've identified the problem type, the next step is to isolate the variable. Try moving all terms with the variable to one side of the equation.",
-        timestamp: new Date().toISOString()
-      };
-      setConversation(prev => [...prev, nextStep]);
+    setError(null);
+
+    try {
+      const response = await aiService.resolveDoubtAI({
+        studentQuestion: 'Please show me the next step.',
+        assignmentContext: assignmentContext || 'General question',
+        conversationHistory: conversation.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }))
+      });
+
+      if (response.success && response.hint) {
+        const nextStep: ConversationMessage = {
+          role: 'assistant',
+          content: response.hint,
+          timestamp: new Date().toISOString()
+        };
+        setConversation(prev => [...prev, nextStep]);
+      } else {
+        setError(response.error || 'Failed to get next step');
+      }
+    } catch (error) {
+      console.error('Error getting next step:', error);
+      setError('Sorry, I couldn\'t provide the next step. Please try asking your teacher for help.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleFeedback = (helpful: boolean) => {
@@ -86,38 +134,85 @@ const AIDoubtResolution: React.FC = () => {
     // Here you would redirect to peer help board
   };
 
+  const clearConversation = () => {
+    setConversation([]);
+    setError(null);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Doubt Resolution</h1>
         <p className="text-gray-600">Get instant help with your questions. If AI can't help, we'll connect you with teachers or classmates.</p>
+        
+        {/* Connection Status */}
+        {isConnected !== null && (
+          <div className={`mt-2 flex items-center gap-2 text-sm ${
+            isConnected ? 'text-green-600' : 'text-red-600'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              isConnected ? 'bg-green-500' : 'bg-red-500'
+            }`}></div>
+            {isConnected ? 'AI Assistant is online' : 'AI Assistant is offline - try teacher or peer help'}
+          </div>
+        )}
       </div>
 
       {/* AI Chat Interface */}
       <div className="bg-white rounded-xl shadow-sm border">
         {/* Chat Header */}
         <div className="p-4 border-b border-gray-200 bg-blue-50">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-full">
-              <Bot className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <Bot className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">AI Learning Assistant</h3>
+                <p className="text-sm text-gray-600">I'm here to help guide you through problems step by step</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">AI Learning Assistant</h3>
-              <p className="text-sm text-gray-600">I'm here to help guide you through problems step by step</p>
-            </div>
+            {conversation.length > 0 && (
+              <button
+                onClick={clearConversation}
+                className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-lg hover:bg-white"
+              >
+                Clear Chat
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-red-50 border-b border-red-200">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{error}</span>
+            </div>
+          </div>
+        )}
+
         {/* Chat Messages */}
         <div className="h-96 overflow-y-auto p-4 space-y-4">
-          {conversation.length === 0 && (
+          {conversation.length === 0 && !isLoading && (
             <div className="text-center py-8">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lightbulb className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Ask me anything!</h3>
-              <p className="text-gray-600">I'll help you understand concepts step by step without giving away the full answer.</p>
+              <p className="text-gray-600 mb-4">I'll help you understand concepts step by step without giving away the full answer.</p>
+              
+              {/* Example Questions */}
+              <div className="max-w-md mx-auto space-y-2">
+                <p className="text-sm font-medium text-gray-700 mb-2">Try asking:</p>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>"How do I solve quadratic equations?"</p>
+                  <p>"What's the difference between mean and median?"</p>
+                  <p>"Can you help me understand photosynthesis?"</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -134,7 +229,7 @@ const AIDoubtResolution: React.FC = () => {
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-100 text-gray-900'
               }`}>
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-xs mt-1 ${
                   message.role === 'user' ? 'text-blue-200' : 'text-gray-500'
                 }`}>
@@ -151,11 +246,11 @@ const AIDoubtResolution: React.FC = () => {
           ))}
 
           {/* AI Response Actions */}
-          {conversation.length > 0 && conversation[conversation.length - 1].role === 'assistant' && (
+          {conversation.length > 0 && conversation[conversation.length - 1].role === 'assistant' && !isLoading && (
             <div className="flex items-center gap-3 ml-11">
               <button
                 onClick={handleShowNextStep}
-                className="flex items-center gap-2 bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-300"
+                className="flex items-center gap-2 bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm hover:bg-gray-300 transition-colors"
               >
                 <ArrowRight className="w-3 h-3" />
                 Show Next Step
@@ -164,14 +259,14 @@ const AIDoubtResolution: React.FC = () => {
               <div className="flex gap-1">
                 <button
                   onClick={() => handleFeedback(true)}
-                  className="p-1 text-gray-400 hover:text-green-600"
+                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                   title="Helpful"
                 >
                   <ThumbsUp className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleFeedback(false)}
-                  className="p-1 text-gray-400 hover:text-red-600"
+                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                   title="Not helpful"
                 >
                   <ThumbsDown className="w-4 h-4" />
@@ -187,7 +282,7 @@ const AIDoubtResolution: React.FC = () => {
               </div>
               <div className="bg-gray-100 px-4 py-2 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <Loader className="animate-spin w-4 h-4 text-blue-600" />
                   <span className="text-sm text-gray-600">Thinking...</span>
                 </div>
               </div>
@@ -216,9 +311,10 @@ const AIDoubtResolution: React.FC = () => {
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSubmitQuestion()}
+                  onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSubmitQuestion()}
                   placeholder="Ask your question..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isLoading || isConnected === false}
                 />
                 <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   <Mic className="w-4 h-4" />
@@ -226,10 +322,10 @@ const AIDoubtResolution: React.FC = () => {
               </div>
               <button
                 onClick={handleSubmitQuestion}
-                disabled={!question.trim() || isLoading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!question.trim() || isLoading || isConnected === false}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Send className="w-4 h-4" />
+                {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -248,14 +344,14 @@ const AIDoubtResolution: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={escalateToTeacher}
-                className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm"
+                className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm transition-colors"
               >
                 <User className="w-4 h-4" />
                 Ask Teacher
               </button>
               <button
                 onClick={escalateToPeers}
-                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm transition-colors"
               >
                 <Users className="w-4 h-4" />
                 Ask Classmates
@@ -275,7 +371,7 @@ const AIDoubtResolution: React.FC = () => {
               <p className="text-xs text-gray-500">Math Chapter 5 • 2 hours ago</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Resolved</span>
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">AI Helped</span>
               <button className="text-blue-600 hover:text-blue-800 text-sm">
                 <MessageSquare className="w-4 h-4" />
               </button>
