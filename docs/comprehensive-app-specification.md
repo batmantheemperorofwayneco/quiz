@@ -65,10 +65,10 @@
   - Archive icon (bg-red-500) with confirmation modal
   - Moves class to inactive state while preserving data
 
-#### 2. Advanced Assignment Planning: Workflow Builder
+#### 2. Advanced Assignment Planning: Monthly/Yearly Workflow Builder
 
 **Assignment Workflow Builder Page**
-- **Purpose**: Visual design tool for automated monthly/yearly homework scheduling
+- **Purpose**: Visual design tool for automated monthly/yearly homework scheduling and learning path creation
 - **Core Interface**:
   - **Workflow Canvas**: Large, interactive, grid-background canvas with drag-and-drop functionality
   - **Zoom/Pan Controls**: ZoomIn, ZoomOut, Fit to Screen buttons for navigation
@@ -100,7 +100,7 @@
 
 **View Modes**: Monthly View, Yearly View, Timeline View for long-term planning visualization
 
-#### 3. AI-Assisted Assignment Generation
+#### 3. AI-Assisted Assignment Generation (Optional Tool)
 
 **Integration within Assignment Creation Page**:
 - **AI Draft Assistant Panel**: Prominent button with Sparkles icon, bg-purple-100 background
@@ -116,7 +116,7 @@
   - **AI Output Display**: Shows generated assignment content
   - **Action Buttons**: Accept & Insert, Regenerate, Discard options
 
-**Clarification**: AI assistance is optional - full manual creation remains available and editable
+**Clarification**: AI assistance is optional - full manual creation remains available and editable. Teachers can start from scratch, use AI as inspiration, or heavily modify AI-generated content.
 
 #### 4. Real-time Progress Monitoring
 
@@ -142,7 +142,7 @@
 
 ### B. Student Interface - Complete Feature Set
 
-#### 1. Gamified Leaderboard System
+#### 1. Gamified Leaderboard System (Teacher-Controlled)
 
 **Leaderboard Page Implementation**:
 - **Header**: "Leaderboard" title with back navigation
@@ -154,10 +154,11 @@
   - **Ranked Rows**: Each showing rank number, profile picture, student name, total points, trend indicators
   - **My Rank Highlight**: Current student's row clearly highlighted with distinct background and bold text
 - **Visual Design**: Engaging background, clear typography, trophy icons for top performers
+- **Availability**: Only visible when teacher enables "Gamification" in class settings
 
-#### 2. Peer Support System
+#### 2. Peer Support System (Anonymous Request/Offer Help Board)
 
-**Peer Help (Anonymous Request/Offer Help Board)**:
+**Peer Help Page (Teacher-Controlled)**:
 - **Tabbed Interface**: "My Questions" and "Help Others" sections
 - **My Questions Tab**:
   - List of posted questions with snippets, assignment context, timestamps
@@ -170,8 +171,9 @@
   - **Interaction Buttons**: "View Question," "Offer Help" (Lightbulb icon)
   - **Help Interface**: Text input for hints/explanations with Submit Hint button
 - **My Peer Help Contributions**: Dedicated section showing student's provided assistance
+- **Availability**: Only accessible when teacher enables "Peer Learning" in class settings
 
-#### 3. Smart Doubt Resolution with AI
+#### 3. Smart Doubt Resolution with AI (Additional Support Option)
 
 **AI-Powered Doubt Interface**:
 - **Input Methods**: Text area with "Ask your question..." placeholder, Mic icon for voice input
@@ -185,7 +187,7 @@
   - **Request Teacher Help**: User icon, bg-orange-500 - direct teacher queue submission
   - **Ask Classmates**: Users icon, bg-purple-500 - peer help board integration
 
-**Clarification**: AI provides first-line support with clear pathways to human assistance (teacher/peers)
+**Clarification**: AI provides first-line support for common doubts with clear pathways to human assistance (teacher/peers). Traditional doubt clearing through teacher and peer channels remains fully functional and is the primary support system.
 
 #### 4. Assignment Management & Submission
 
@@ -212,15 +214,14 @@
 
 ### A. Backend AI Implementation
 
-**OpenRouter API Integration**:
-- **Endpoint**: https://openrouter.ai/api/v1/chat/completions
-- **Model**: qwen/qwen-2.5-72b-instruct:free
-- **Authentication**: Bearer token (server-side only)
-- **Security**: API key stored as environment variable, never client-exposed
+**Gemini API Integration**:
+- **Model**: gemini-2.0-flash for text generation
+- **Authentication**: API key stored as environment variable (server-side only)
+- **Security**: Never expose API keys client-side
 
 ### B. AI Feature Functions
 
-#### 1. Assignment Generation Function
+#### 1. Assignment Generation Function (Optional Tool)
 ```javascript
 POST /api/generateAssignmentDraft
 Request Body: {
@@ -241,7 +242,7 @@ Request Body: {
 "You are an expert K-12 educational content creator specializing in generating accurate, age-appropriate, and structured assignment questions or prompts. Your output must be directly usable as assignment content. Do not include any conversational intros, conclusions, or meta-commentary. Focus solely on the requested assignment content."
 ```
 
-#### 2. Smart Doubt Resolution Function
+#### 2. Smart Doubt Resolution Function (Additional Support)
 ```javascript
 POST /api/resolveDoubtAI
 Request Body: {
@@ -331,8 +332,8 @@ allow read, write: if request.auth != null;
 - **Efficient Querying**: Filtered by classId and assignmentId for performance
 
 ### B. Collaborative Features
-- **Peer Help Board**: Real-time question/answer updates
-- **Leaderboard**: Dynamic point updates with onSnapshot listeners
+- **Peer Help Board**: Real-time question/answer updates (when enabled by teacher)
+- **Leaderboard**: Dynamic point updates with onSnapshot listeners (when enabled by teacher)
 - **Notifications**: Instant feedback delivery and doubt responses
 
 ---
@@ -344,10 +345,11 @@ allow read, write: if request.auth != null;
 - **Personalized Learning Paths**: Customized content delivery per student capability
 - **Adaptive Difficulty**: Dynamic adjustment based on student progress
 
-### B. Gamification System
+### B. Gamification System (Teacher-Controlled)
 - **Point Allocation**: Assignment completion, score achievements, peer help contributions
 - **Badge System**: Achievement criteria with progress tracking
 - **Leaderboard Management**: Class-specific rankings with teacher controls
+- **Teacher Toggle**: Complete control over gamification features per class
 
 ### C. Multi-Modal Content Support
 - **Assignment Creation**: Text, image, audio, video, drawing integration
@@ -378,12 +380,13 @@ allow read, write: if request.auth != null;
 - **Batch Actions**: Multi-select operations for efficiency
 - **Template System**: Reusable assignment templates
 - **Quick Access**: Prominent buttons for common actions
+- **Feature Control**: Clear toggles for peer learning and gamification per class
 
 ### B. Student Engagement
 - **Intuitive Navigation**: Clear, consistent interface patterns
 - **Immediate Feedback**: Real-time progress indicators
-- **Motivation Systems**: Achievements, progress visualization, peer recognition
-- **Help Accessibility**: Multiple support channels (AI, peer, teacher)
+- **Motivation Systems**: Achievements, progress visualization, peer recognition (when enabled)
+- **Help Accessibility**: Multiple support channels (AI, peer, teacher) with clear escalation paths
 
 ---
 
@@ -396,10 +399,10 @@ allow read, write: if request.auth != null;
 4. Essential UI components
 
 ### Phase 2: Advanced Features
-1. AI integration (assignment generation, doubt resolution)
+1. Class settings with peer learning and gamification toggles
 2. Workflow builder implementation
-3. Gamification system
-4. Peer collaboration features
+3. AI integration (optional assignment generation, additional doubt support)
+4. Peer collaboration features (teacher-controlled)
 
 ### Phase 3: Analytics & Optimization
 1. Performance analytics dashboards
@@ -416,19 +419,21 @@ allow read, write: if request.auth != null;
 - Student engagement rates
 - Time saved on grading and feedback
 - Class performance improvements
+- Feature adoption rates (peer learning, gamification)
 
 ### B. Student Metrics
 - Assignment completion rates
 - Learning outcome improvements
-- Peer collaboration participation
+- Peer collaboration participation (when enabled)
 - Help-seeking behavior patterns
+- AI assistance effectiveness
 
 ### C. System Metrics
 - Platform usage statistics
-- AI assistance effectiveness
+- AI assistance effectiveness and escalation rates
 - Real-time feature performance
 - User satisfaction scores
 
 ---
 
-This comprehensive specification provides a complete blueprint for "The Learning Canvas" application, ensuring all features are properly documented, technically feasible, and aligned with educational best practices. The system is designed to be scalable, maintainable, and capable of transforming the homework management experience for both teachers and students.
+This comprehensive specification provides a complete blueprint for "The Learning Canvas" application, ensuring all features are properly documented, technically feasible, and aligned with educational best practices. The system emphasizes teacher control over collaborative and gamification features while providing optional AI assistance that supplements rather than replaces human support channels.
