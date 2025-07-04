@@ -18,7 +18,9 @@ import {
   X,
   Sparkles,
   Loader,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 const CreateAssignment: React.FC = () => {
@@ -29,6 +31,7 @@ const CreateAssignment: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDraft, setAiDraft] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
+  const [apiStatus, setApiStatus] = useState<{ connected: boolean; model: string; error?: string } | null>(null);
   const [aiOptions, setAiOptions] = useState({
     questionType: 'MCQ',
     difficulty: 'Medium',
@@ -68,6 +71,26 @@ const CreateAssignment: React.FC = () => {
   });
 
   const teacherClasses = classes.filter(c => c.teacherId === user?.id);
+
+  // Check API status when AI assistant is opened
+  React.useEffect(() => {
+    if (showAIAssistant && !apiStatus) {
+      checkAPIStatus();
+    }
+  }, [showAIAssistant]);
+
+  const checkAPIStatus = async () => {
+    try {
+      const status = await aiService.getAPIStatus();
+      setApiStatus(status);
+    } catch (error) {
+      setApiStatus({
+        connected: false,
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        error: 'Failed to check API status'
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent, status: 'Draft' | 'Active') => {
     e.preventDefault();
@@ -161,7 +184,7 @@ const CreateAssignment: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Assignment</h1>
-        <p className="text-gray-600">Design engaging assignments with multi-modal content and personalized learning paths.</p>
+        <p className="text-gray-600">Design engaging assignments with multi-modal content and AI assistance.</p>
       </div>
 
       <form className="space-y-8">
@@ -269,7 +292,7 @@ const CreateAssignment: React.FC = () => {
               className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors"
             >
               <Sparkles className="w-4 h-4" />
-              AI Assistant
+              AI Assistant (Llama 3.3)
             </button>
           </div>
           
@@ -540,10 +563,23 @@ const CreateAssignment: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Sparkles className="w-5 h-5 text-purple-600" />
-                AI Assignment Assistant
-              </h2>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">AI Assignment Assistant</h2>
+                  {apiStatus && (
+                    <div className={`flex items-center gap-2 text-sm ${
+                      apiStatus.connected ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {apiStatus.connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                      {apiStatus.connected 
+                        ? `Connected (${apiStatus.model})` 
+                        : `Offline - ${apiStatus.error || 'Connection failed'}`
+                      }
+                    </div>
+                  )}
+                </div>
+              </div>
               <button 
                 onClick={() => setShowAIAssistant(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -578,6 +614,7 @@ const CreateAssignment: React.FC = () => {
                     <option value="Short Answer">Short Answer</option>
                     <option value="Essay">Essay</option>
                     <option value="Problem Set">Problem Set</option>
+                    <option value="True/False">True/False</option>
                   </select>
                 </div>
 
@@ -612,6 +649,7 @@ const CreateAssignment: React.FC = () => {
                     onChange={(e) => setAiOptions(prev => ({ ...prev, gradeLevel: e.target.value }))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   >
+                    <option value="5th Grade">5th Grade</option>
                     <option value="6th Grade">6th Grade</option>
                     <option value="7th Grade">7th Grade</option>
                     <option value="8th Grade">8th Grade</option>
@@ -622,7 +660,7 @@ const CreateAssignment: React.FC = () => {
                   </select>
                 </div>
 
-                {aiOptions.questionType === 'MCQ' && (
+                {(aiOptions.questionType === 'MCQ' || aiOptions.questionType === 'Problem Set') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Questions</label>
                     <input
@@ -653,7 +691,7 @@ const CreateAssignment: React.FC = () => {
 
               <button
                 onClick={handleGenerateAIDraft}
-                disabled={!aiPrompt.trim() || aiLoading}
+                disabled={!aiPrompt.trim() || aiLoading || !apiStatus?.connected}
                 className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {aiLoading ? (
@@ -672,7 +710,7 @@ const CreateAssignment: React.FC = () => {
               {aiDraft && (
                 <div className="border-t pt-6">
                   <h3 className="font-medium text-gray-900 mb-3">Generated Content:</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4 max-h-64 overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-sm text-gray-700">{aiDraft}</pre>
                   </div>
                   <div className="flex gap-3">

@@ -12,7 +12,9 @@ import {
   MessageSquare,
   Clock,
   AlertCircle,
-  Loader
+  Loader,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { aiService } from '../../../services/aiService';
 
@@ -28,19 +30,23 @@ const AIDoubtResolution: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [assignmentContext, setAssignmentContext] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [apiStatus, setApiStatus] = useState<{ connected: boolean; model: string; error?: string } | null>(null);
 
   // Test AI connection on component mount
   useEffect(() => {
-    const testConnection = async () => {
+    const checkAPIStatus = async () => {
       try {
-        const connected = await aiService.testConnection();
-        setIsConnected(connected);
+        const status = await aiService.getAPIStatus();
+        setApiStatus(status);
       } catch (error) {
-        setIsConnected(false);
+        setApiStatus({
+          connected: false,
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          error: 'Failed to check API status'
+        });
       }
     };
-    testConnection();
+    checkAPIStatus();
   }, []);
 
   const handleSubmitQuestion = async () => {
@@ -144,17 +150,18 @@ const AIDoubtResolution: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Doubt Resolution</h1>
-        <p className="text-gray-600">Get instant help with your questions. If AI can't help, we'll connect you with teachers or classmates.</p>
+        <p className="text-gray-600">Get instant help with your questions using Llama 3.3 70B. If AI can't help, we'll connect you with teachers or classmates.</p>
         
-        {/* Connection Status */}
-        {isConnected !== null && (
+        {/* API Status */}
+        {apiStatus && (
           <div className={`mt-2 flex items-center gap-2 text-sm ${
-            isConnected ? 'text-green-600' : 'text-red-600'
+            apiStatus.connected ? 'text-green-600' : 'text-red-600'
           }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            {isConnected ? 'AI Assistant is online' : 'AI Assistant is offline - try teacher or peer help'}
+            {apiStatus.connected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+            {apiStatus.connected 
+              ? `AI Assistant is online (${apiStatus.model})` 
+              : `AI Assistant is offline - ${apiStatus.error || 'Connection failed'}`
+            }
           </div>
         )}
       </div>
@@ -169,7 +176,7 @@ const AIDoubtResolution: React.FC = () => {
                 <Bot className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">AI Learning Assistant</h3>
+                <h3 className="font-semibold text-gray-900">AI Learning Assistant (Llama 3.3)</h3>
                 <p className="text-sm text-gray-600">I'm here to help guide you through problems step by step</p>
               </div>
             </div>
@@ -314,7 +321,7 @@ const AIDoubtResolution: React.FC = () => {
                   onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSubmitQuestion()}
                   placeholder="Ask your question..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isLoading || isConnected === false}
+                  disabled={isLoading || !apiStatus?.connected}
                 />
                 <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   <Mic className="w-4 h-4" />
@@ -322,7 +329,7 @@ const AIDoubtResolution: React.FC = () => {
               </div>
               <button
                 onClick={handleSubmitQuestion}
-                disabled={!question.trim() || isLoading || isConnected === false}
+                disabled={!question.trim() || isLoading || !apiStatus?.connected}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
