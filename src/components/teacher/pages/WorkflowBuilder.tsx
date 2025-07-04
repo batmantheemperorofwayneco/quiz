@@ -18,8 +18,11 @@ import {
   Clock,
   Plus,
   X,
-  ArrowLeft
+  ArrowLeft,
+  Bot,
+  Loader2
 } from 'lucide-react';
+import * as aiService from '../../../services/openRouterService';
 import { useNavigate } from 'react-router-dom';
 
 interface WorkflowNode {
@@ -49,6 +52,16 @@ const WorkflowBuilder: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [viewMode, setViewMode] = useState<'monthly' | 'yearly' | 'timeline'>('monthly');
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
+  
+  // AI Workflow Assistant states
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiWorkflowType, setAiWorkflowType] = useState('sequential');
+  const [aiComplexity, setAiComplexity] = useState('medium');
+  const [aiTriggerType, setAiTriggerType] = useState('date-time');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedWorkflow, setGeneratedWorkflow] = useState('');
+  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'offline'>('checking');
 
   const nodeTypes = {
     triggers: [
@@ -79,9 +92,19 @@ const WorkflowBuilder: React.FC = () => {
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
+    // Find the correct node type from all categories
+    const allTypes = [...nodeTypes.triggers, ...nodeTypes.actions, ...nodeTypes.conditions, ...nodeTypes.control];
+    const nodeTypeData = allTypes.find(t => t.type === draggedNodeType);
+    
+    let nodeCategory: 'trigger' | 'action' | 'condition' | 'control' = 'trigger';
+    if (nodeTypes.triggers.find(t => t.type === draggedNodeType)) nodeCategory = 'trigger';
+    else if (nodeTypes.actions.find(t => t.type === draggedNodeType)) nodeCategory = 'action';
+    else if (nodeTypes.conditions.find(t => t.type === draggedNodeType)) nodeCategory = 'condition';
+    else if (nodeTypes.control.find(t => t.type === draggedNodeType)) nodeCategory = 'control';
+
     const newNode: WorkflowNode = {
       id: `node-${Date.now()}`,
-      type: draggedNodeType.split('-')[0] as any,
+      type: nodeCategory,
       subtype: draggedNodeType,
       x,
       y,
@@ -123,6 +146,74 @@ const WorkflowBuilder: React.FC = () => {
 
   const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
 
+  // AI Assistant Functions
+  const checkAPIStatus = async () => {
+    try {
+      const status = await aiService.getAPIStatus();
+      setApiStatus(status ? 'connected' : 'offline');
+    } catch (error) {
+      setApiStatus('offline');
+    }
+  };
+
+  React.useEffect(() => {
+    checkAPIStatus();
+  }, []);
+
+  const handleGenerateWorkflow = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsGenerating(true);
+    try {
+      const prompt = `Create a detailed assignment workflow based on the following requirements:
+
+${aiPrompt}
+
+Workflow Type: ${aiWorkflowType}
+Complexity: ${aiComplexity}
+Primary Trigger: ${aiTriggerType}
+
+Please provide a comprehensive workflow description that includes:
+1. Clear workflow steps and sequence
+2. Trigger conditions and timing
+3. Actions to be performed
+4. Conditional logic if needed
+5. Notifications and communications
+6. Assessment and feedback mechanisms
+
+Format the response as a detailed workflow plan that can be implemented in an educational management system.`;
+      
+      const result = await aiService.generateAssignmentDraft(prompt, {
+        questionType: 'workflow',
+        difficulty: aiComplexity,
+        topic: 'workflow-automation',
+        gradeLevel: 'general',
+        questionCount: 1,
+        wordCount: 800
+      });
+      
+      setGeneratedWorkflow(result);
+    } catch (error) {
+      console.error('Error generating workflow:', error);
+      alert('Failed to generate workflow. Please check your API connection and try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAcceptAIWorkflow = () => {
+    // For now, we'll just show the generated workflow in an alert
+    // In a full implementation, this would parse the workflow and create nodes
+    alert('AI Workflow accepted! In a full implementation, this would automatically create workflow nodes based on the generated content.');
+    setGeneratedWorkflow('');
+    setShowAIAssistant(false);
+    setAiPrompt('');
+  };
+
+  const handleDiscardAIWorkflow = () => {
+    setGeneratedWorkflow('');
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -155,6 +246,13 @@ const WorkflowBuilder: React.FC = () => {
               <option value="timeline">Timeline View</option>
             </select>
             
+            <button 
+              onClick={() => setShowAIAssistant(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              <Bot className="w-4 h-4" />
+              AI Workflow Assistant
+            </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
               <Save className="w-4 h-4" />
               Save Draft
@@ -421,6 +519,157 @@ const WorkflowBuilder: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* AI Workflow Assistant Modal */}
+      {showAIAssistant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <Bot className="w-6 h-6 text-purple-600" />
+                <h2 className="text-xl font-semibold text-gray-900">AI Workflow Assistant (Llama 3.3)</h2>
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  apiStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                  apiStatus === 'offline' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {apiStatus === 'connected' ? 'Connected' :
+                   apiStatus === 'offline' ? 'Offline' : 'Checking...'}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAIAssistant(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Input Section */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Describe your workflow requirements
+                    </label>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      rows={6}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Example: Create a workflow that releases a math quiz every Monday, sends reminders to students who haven't completed it after 2 days, and automatically assigns remedial work to students who score below 70%..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Workflow Type</label>
+                      <select
+                        value={aiWorkflowType}
+                        onChange={(e) => setAiWorkflowType(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="sequential">Sequential</option>
+                        <option value="parallel">Parallel</option>
+                        <option value="conditional">Conditional</option>
+                        <option value="hybrid">Hybrid</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Complexity</label>
+                      <select
+                        value={aiComplexity}
+                        onChange={(e) => setAiComplexity(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="simple">Simple</option>
+                        <option value="medium">Medium</option>
+                        <option value="complex">Complex</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Primary Trigger</label>
+                    <select
+                      value={aiTriggerType}
+                      onChange={(e) => setAiTriggerType(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="date-time">Date & Time</option>
+                      <option value="assignment-completion">Assignment Completion</option>
+                      <option value="manual-unlock">Manual Trigger</option>
+                      <option value="score-based">Score-Based</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleGenerateWorkflow}
+                    disabled={!aiPrompt.trim() || isGenerating || apiStatus !== 'connected'}
+                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating Workflow...
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-4 h-4" />
+                        Generate Workflow
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Generated Workflow Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Generated Workflow</h3>
+                  
+                  {generatedWorkflow ? (
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap text-sm text-gray-800">{generatedWorkflow}</pre>
+                      </div>
+                      
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleAcceptAIWorkflow}
+                          className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                        >
+                          Accept Workflow
+                        </button>
+                        <button
+                          onClick={handleGenerateWorkflow}
+                          disabled={isGenerating}
+                          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                        >
+                          Regenerate
+                        </button>
+                      </div>
+                      
+                      <button
+                        onClick={handleDiscardAIWorkflow}
+                        className="w-full bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
+                      >
+                        Discard
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Generated workflow will appear here</p>
+                      <p className="text-sm text-gray-500 mt-2">Describe your workflow requirements and click "Generate Workflow"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

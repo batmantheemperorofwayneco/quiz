@@ -168,6 +168,23 @@ const CreateAssignment: React.FC = () => {
   };
 
   const handleAcceptAIDraft = () => {
+    // Replace the entire content with AI-generated content
+    setFormData(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        text: aiDraft
+      },
+      // Auto-fill title and description if they're empty
+      title: prev.title || `AI Generated Assignment - ${aiOptions.topic}`,
+      description: prev.description || `${aiOptions.questionType} assignment on ${aiOptions.topic} (${aiOptions.difficulty} level)`
+    }));
+    setAiDraft('');
+    setShowAIAssistant(false);
+  };
+
+  const handleAppendAIDraft = () => {
+    // Append to existing content
     setFormData(prev => ({
       ...prev,
       content: {
@@ -713,27 +730,37 @@ const CreateAssignment: React.FC = () => {
                   <div className="bg-gray-50 p-4 rounded-lg mb-4 max-h-64 overflow-y-auto">
                     <pre className="whitespace-pre-wrap text-sm text-gray-700">{aiDraft}</pre>
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleAcceptAIDraft}
-                      className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-                    >
-                      Accept & Insert
-                    </button>
-                    <button
-                      onClick={handleGenerateAIDraft}
-                      disabled={aiLoading}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Regenerate
-                    </button>
-                    <button
-                      onClick={() => setAiDraft('')}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Discard
-                    </button>
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleAcceptAIDraft}
+                        className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                      >
+                        Replace Content
+                      </button>
+                      <button
+                        onClick={handleAppendAIDraft}
+                        className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                      >
+                        Append to Content
+                      </button>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleGenerateAIDraft}
+                        disabled={aiLoading}
+                        className="flex items-center justify-center gap-2 flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Regenerate
+                      </button>
+                      <button
+                        onClick={() => setAiDraft('')}
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      >
+                        Discard
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
