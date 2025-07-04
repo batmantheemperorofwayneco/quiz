@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, Home, BookOpen, TrendingUp, MessageCircle, User, GraduationCap } from 'lucide-react';
+import { X, Home, BookOpen, TrendingUp, MessageCircle, User, GraduationCap, Users, Bot, Trophy } from 'lucide-react';
 
 interface StudentSidebarProps {
   isOpen: boolean;
@@ -12,7 +12,10 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({ isOpen, onClose }) => {
     { to: '/', icon: Home, label: 'Dashboard' },
     { to: '/assignments', icon: BookOpen, label: 'Assignments' },
     { to: '/progress', icon: TrendingUp, label: 'Progress' },
-    { to: '/doubts', icon: MessageCircle, label: 'Ask Doubts' },
+    { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
+    { to: '/peer-help', icon: Users, label: 'Peer Help' },
+    { to: '/ai-doubts', icon: Bot, label: 'AI Doubt Resolution' },
+    { to: '/doubts', icon: MessageCircle, label: 'Ask Teacher' },
     { to: '/profile', icon: User, label: 'Profile' },
   ];
 
@@ -35,7 +38,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">EduPlatform</span>
+            <span className="text-xl font-bold text-gray-900">EduAssist</span>
           </div>
           <button
             onClick={onClose}

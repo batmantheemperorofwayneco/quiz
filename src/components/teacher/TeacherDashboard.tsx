@@ -9,6 +9,7 @@ import AssignmentList from './pages/AssignmentList';
 import StudentPerformance from './pages/StudentPerformance';
 import DoubtResolution from './pages/DoubtResolution';
 import TeacherProfile from './pages/TeacherProfile';
+import WorkflowBuilder from './pages/WorkflowBuilder';
 
 const TeacherDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -25,6 +26,7 @@ const TeacherDashboard: React.FC = () => {
             <Route path="/" element={<TeacherHome />} />
             <Route path="/classes" element={<ClassManagement />} />
             <Route path="/assignments/create" element={<CreateAssignment />} />
+            <Route path="/workflow-builder" element={<WorkflowBuilder />} />
             <Route path="/assignments" element={<AssignmentList />} />
             <Route path="/performance" element={<StudentPerformance />} />
             <Route path="/doubts" element={<DoubtResolution />} />

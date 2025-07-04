@@ -7,6 +7,9 @@ import StudentAssignments from './pages/StudentAssignments';
 import StudentProgress from './pages/StudentProgress';
 import StudentDoubtResolution from './pages/StudentDoubtResolution';
 import StudentProfile from './pages/StudentProfile';
+import PeerHelp from './pages/PeerHelp';
+import AIDoubtResolution from './pages/AIDoubtResolution';
+import StudentLeaderboard from './pages/StudentLeaderboard';
 
 const StudentDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -23,6 +26,9 @@ const StudentDashboard: React.FC = () => {
             <Route path="/" element={<StudentHome />} />
             <Route path="/assignments" element={<StudentAssignments />} />
             <Route path="/progress" element={<StudentProgress />} />
+            <Route path="/leaderboard" element={<StudentLeaderboard />} />
+            <Route path="/peer-help" element={<PeerHelp />} />
+            <Route path="/ai-doubts" element={<AIDoubtResolution />} />
             <Route path="/doubts" element={<StudentDoubtResolution />} />
             <Route path="/profile" element={<StudentProfile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
