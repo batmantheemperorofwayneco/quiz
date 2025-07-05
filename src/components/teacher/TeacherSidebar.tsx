@@ -12,7 +12,7 @@ import {
   LogOut,
   X,
   GraduationCap,
-  GitFork,
+  Calendar,
   Bot
 } from 'lucide-react';
 
@@ -30,7 +30,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({ isOpen, onClose }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/' },
     { id: 'classes', label: 'My Classes', icon: Users, path: '/classes' },
     { id: 'create-assignment', label: 'Create Assignment', icon: Plus, path: '/assignments/create' },
-    { id: 'workflow-builder', label: 'Workflow Builder', icon: GitFork, path: '/workflow-builder' },
+    { id: 'assignment-calendar', label: 'Assignment Calendar', icon: Calendar, path: '/assignment-calendar' },
     { id: 'assignments', label: 'All Assignments', icon: BookOpen, path: '/assignments' },
     { id: 'performance', label: 'Performance Insights', icon: BarChart3, path: '/performance' },
     { id: 'doubts', label: 'Doubt Resolution', icon: MessageSquare, path: '/doubts' },
