@@ -1,6 +1,6 @@
-// OpenRouter AI Service for handling Llama 3.3 70B Instruct API calls
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// LLM7.io AI Service for handling GPT-4.1 API calls
+const LLM7_API_KEY = 'unused'; // Free access doesn't require a real API key
+const LLM7_API_URL = 'https://api.llm7.io/v1/chat/completions';
 const SITE_URL = import.meta.env.VITE_SITE_URL || 'http://localhost:5173';
 
 interface AssignmentGenerationRequest {
@@ -27,26 +27,29 @@ interface OpenRouterMessage {
 }
 
 export class OpenRouterService {
-  private async callOpenRouterAPI(
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async callLLM7API(
     messages: OpenRouterMessage[], 
     temperature: number = 0.7,
-    maxTokens: number = 1500
+    maxTokens: number = 1500,
+    retryCount: number = 0
   ): Promise<string> {
-    if (!OPENROUTER_API_KEY) {
-      throw new Error('OpenRouter API key is not configured. Please check your environment variables.');
-    }
+
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
 
     try {
-      const response = await fetch(OPENROUTER_API_URL, {
+      const response = await fetch(LLM7_API_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': SITE_URL,
-          'X-Title': 'The Learning Canvas',
+          'Authorization': `Bearer ${LLM7_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: 'gpt-4.1-2025-04-14',
           messages,
           temperature,
           max_tokens: maxTokens,
@@ -55,21 +58,38 @@ export class OpenRouterService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('OpenRouter API Error Response:', {
+        console.error('LLM7 API Error Response:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorData
+          error: errorData,
+          retryCount
         });
 
         // Handle specific error cases
         if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
+          throw new Error('API authentication failed. Please check the LLM7.io service status.');
         } else if (response.status === 402) {
-          throw new Error('Insufficient credits. Please check your OpenRouter account balance.');
+          throw new Error('Service quota exceeded. Please try again later or get a token at https://token.llm7.io/');
         } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+          // Rate limit exceeded - implement exponential backoff retry
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+            console.log(`Rate limit hit. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+            await this.sleep(delay);
+            return this.callLLM7API(messages, temperature, maxTokens, retryCount + 1);
+          } else {
+            throw new Error('Rate limit exceeded. Please wait a few minutes before trying again.');
+          }
         } else if (response.status >= 500) {
-          throw new Error('OpenRouter service is temporarily unavailable. Please try again later.');
+          // Server errors - also retry with exponential backoff
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount);
+            console.log(`Server error. Retrying in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+            await this.sleep(delay);
+            return this.callLLM7API(messages, temperature, maxTokens, retryCount + 1);
+          } else {
+            throw new Error('LLM7.io service is temporarily unavailable. Please try again later.');
+          }
         }
 
         throw new Error(`API call failed: ${response.status} ${response.statusText}`);
@@ -139,7 +159,7 @@ Ensure the language and tone are suitable for an Indian educational context (e.g
         content: userMessageContent
       };
 
-      const draftContent = await this.callOpenRouterAPI(
+      const draftContent = await this.callLLM7API(
         [systemPrompt, userMessage], 
         0.2, // Very low temperature for deterministic, factual output
         1500
@@ -187,7 +207,7 @@ If the question is unclear or beyond your scope, politely ask for clarification 
         content: `My question is: "${request.studentQuestion}". The context for this problem is: "${request.assignmentContext}". Please provide the next logical step or a hint.`
       });
 
-      const hint = await this.callOpenRouterAPI(
+      const hint = await this.callLLM7API(
         messages, 
         0.6, // Slightly higher for varied hints, but still grounded
         150  // Keep hints concise
@@ -220,10 +240,10 @@ If the question is unclear or beyond your scope, politely ask for clarification 
         }
       ];
 
-      const response = await this.callOpenRouterAPI(testMessages, 0.1, 50);
+      const response = await this.callLLM7API(testMessages, 0.1, 50);
       return response.toLowerCase().includes('connection successful') || response.toLowerCase().includes('successful');
     } catch (error) {
-      console.error('OpenRouter service connection test failed:', error);
+      console.error('LLM7.io service connection test failed:', error);
       return false;
     }
   }
@@ -234,7 +254,7 @@ If the question is unclear or beyond your scope, politely ask for clarification 
       await this.testConnection();
       return {
         connected: true,
-        model: 'meta-llama/llama-3.3-70b-instruct:free'
+        model: 'gpt-4.1-2025-04-14'
       };
     } catch (error) {
       return {

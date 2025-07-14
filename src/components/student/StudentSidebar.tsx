@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { X, Home, BookOpen, TrendingUp, MessageCircle, User, GraduationCap, Users, Bot, Trophy } from 'lucide-react';
+import Logo from '../common/Logo';
 
 interface StudentSidebarProps {
   isOpen: boolean;
@@ -37,8 +38,12 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({ isOpen, onClose }) => {
       `}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">EduAssist</span>
+            <Logo size="md" />
+            <div>
+              <span className="text-lg font-bold text-gray-900">The Learning</span>
+              <br />
+              <span className="text-lg font-bold text-gray-900">Canvas</span>
+            </div>
           </div>
           <button
             onClick={onClose}

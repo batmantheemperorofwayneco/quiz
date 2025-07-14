@@ -8,6 +8,7 @@ import {
   Settings,
   GraduationCap
 } from 'lucide-react';
+import Logo from './common/Logo';
 
 interface SidebarProps {
   activeView: string;
@@ -28,10 +29,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
   return (
     <div className="bg-slate-900 text-white w-64 min-h-screen p-6">
       <div className="flex items-center gap-3 mb-8">
-        <div className="bg-blue-600 p-2 rounded-lg">
-          <GraduationCap className="w-6 h-6" />
+        <Logo size="md" />
+        <div>
+          <h1 className="text-lg font-bold text-white">The Learning</h1>
+          <h1 className="text-lg font-bold text-white">Canvas</h1>
         </div>
-        <h1 className="text-xl font-bold">EduAssist</h1>
       </div>
       
       <nav>

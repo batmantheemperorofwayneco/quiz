@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { GraduationCap, User, Mail, Lock, Building, BookOpen, ArrowLeft } from 'lucide-react';
+import { GraduationCap, User, Mail, Lock, Building, BookOpen, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import Logo from '../common/Logo';
 
 const TeacherRegister: React.FC = () => {
   const navigate = useNavigate();
@@ -65,11 +66,14 @@ const TeacherRegister: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <GraduationCap className="w-8 h-8 text-blue-600" />
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <Logo size="lg" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">The Learning</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Canvas</h1>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Teacher Account</h1>
-            <p className="text-gray-600">Join EduAssist and start managing your classes</p>
+            <h2 className="text-xl text-gray-600">Teacher Registration</h2>
           </div>
 
           {/* Error Message */}

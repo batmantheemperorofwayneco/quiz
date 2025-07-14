@@ -15,6 +15,7 @@ import {
   Calendar,
   Bot
 } from 'lucide-react';
+import Logo from '../common/Logo';
 
 interface TeacherSidebarProps {
   isOpen: boolean;
@@ -66,10 +67,11 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <GraduationCap className="w-6 h-6" />
+              <Logo size="md" />
+              <div>
+                <h1 className="text-lg font-bold text-white">The Learning</h1>
+                <h1 className="text-lg font-bold text-white">Canvas</h1>
               </div>
-              <h1 className="text-xl font-bold">EduAssist</h1>
             </div>
             <button
               onClick={onClose}
@@ -100,16 +102,7 @@ const TeacherSidebar: React.FC<TeacherSidebarProps> = ({ isOpen, onClose }) => {
             </ul>
           </nav>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-slate-700">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </button>
-          </div>
+
         </div>
       </div>
     </>

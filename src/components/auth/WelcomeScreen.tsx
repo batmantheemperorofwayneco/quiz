@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Users, BookOpen, BarChart3 } from 'lucide-react';
+import Logo from '../common/Logo';
 
 const WelcomeScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -10,14 +11,15 @@ const WelcomeScreen: React.FC = () => {
       <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="bg-white p-3 rounded-xl shadow-lg">
-              <GraduationCap className="w-8 h-8 text-blue-600" />
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Logo size="xl" className="drop-shadow-lg" />
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-white">The Learning</h1>
+              <h1 className="text-4xl md:text-5xl font-bold text-white">Canvas</h1>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white">EduAssist</h1>
           </div>
           <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-            Comprehensive homework management system that enhances learning through intelligent insights and personalized support
+            Homework Management - Comprehensive system that enhances learning through intelligent insights and personalized support
           </p>
         </div>
 
